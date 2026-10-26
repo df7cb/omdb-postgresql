@@ -1,0 +1,47 @@
+volumes:
+  cache:
+
+services:
+  seed_database:
+    image: postgres:latest
+    profiles:
+      - seed
+    depends_on:
+      omdb:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - /scripts/docker-init.sh
+    volumes:
+      - "cache:/scripts/www.omdb.org"
+      - "./docker-init.sh:/scripts/docker-init.sh"
+      - "./download:/scripts/download"
+      - "./00-drop-tables.sql:/scripts/00-drop-tables.sql"
+      - "./12-kind.sql:/scripts/12-kind.sql"
+      - "./13-schema.sql:/scripts/13-schema.sql"
+      - "./20-import.sql:/scripts/20-import.sql"
+      - "./30-duplicates.sql:/scripts/30-duplicates.sql"
+      - "./31-primary-keys.sql:/scripts/31-primary-keys.sql"
+      - "./40-clean-orphans.sql:/scripts/40-clean-orphans.sql"
+      - "./41-foreign-keys.sql:/scripts/41-foreign-keys.sql"
+      - "./50-views.sql:/scripts/50-views.sql"
+      - "./52-category-en.sql:/scripts/52-category-en.sql"
+      - "./55-purge_dirty.sql:/scripts/55-purge_dirty.sql"
+      - "./60-log.sql:/scripts/60-log.sql"
+      - "./omdb.sql:/scripts/omdb.sql"
+
+  omdb:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: omdb
+      POSTGRES_PORT: 5432
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
